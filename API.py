@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
 
 #nao sei oq significa nada o chat mandou colocar pra fazer conexao da api com o front que ele criou
+#isso aqui nem precisa agr, so coloquei pq tava testando o front (deu certo)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -51,4 +52,5 @@ def criar_perfil(perfil: Perfil):
     cur.close()
     con.close()
     return {"msg": "Perfil criado"}
+
 
