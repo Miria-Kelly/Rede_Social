@@ -1,0 +1,97 @@
+Create table if not exists Perfil(
+								  email varchar(255) not null unique,
+                                  nome varchar(20) not null,
+                                  senha varchar(20) not null,
+                                  perfil_aberto boolean not null,
+                                  id_perfil int auto_increment,
+                                  primary key(id_perfil)
+                                  );
+                                  
+create table if not exists Segue (user_seguidor int,
+								  user_seguido int,
+                                  primary key(user_seguidor, user_seguido),
+                                  foreign key(user_seguidor) references Perfil(id_perfil),
+                                  foreign key(user_seguido) references Perfil(id_perfil)
+                                  );
+
+create table if not exists Conversa(id_conversa int AUTO_INCREMENT,
+									tipo_conversa varchar(10),
+									primary key(id_conversa)
+                                    );
+                                    
+                                    
+create table if not exists Participa(id_perfil int,
+									 id_conversa int,
+                                     primary key(id_perfil, id_conversa),
+                                     foreign key (id_perfil) references perfil(id_perfil),
+                                     foreign key (id_conversa) references Conversa(id_conversa)
+                                     );
+
+                                    
+create table if not exists Mensagem(id_mensagem INT  AUTO_INCREMENT,
+									id_Conversa int not null,
+                                    id_perfil int,
+                                    data_hora timestamp not null,
+                                    conteudo text,
+                                    
+                                    primary key(id_mensagem),
+									foreign key (id_conversa) references Conversa(id_conversa),
+                                    foreign key (id_perfil) references Perfil(id_perfil)
+                                    );
+      
+create table if not exists Publicacao(id_publicacao INT AUTO_INCREMENT, 
+									  id_perfil int,
+                                      data_hora timestamp,
+                                      
+                                      primary key (id_publicacao),
+                                      foreign key(id_perfil) references Perfil(id_perfil)
+                                      );
+
+
+
+
+create table if not exists Interacao(id_interacao INT AUTO_INCREMENT,
+									 id_perfil int,
+                                     id_publicacao int NOT NULL,
+                                     data_hora timestamp,
+                                     
+                                     primary key(id_interacao),
+                                     foreign key(id_perfil) references Perfil(id_perfil),
+                                     foreign key(id_publicacao) references Publicacao(id_publicacao)
+                                     );
+       
+create table if not exists interacao_comentario(id_interacao int not null,
+											 texto text,
+											 primary key(id_interacao),
+                                             foreign key(id_interacao) references Interacao(id_interacao)
+                                             );
+                                             
+
+create table if not exists interacao_curtida(id_interacao INT NOT NULL,
+											 primary key(id_interacao),
+                                             foreign key(id_interacao) references Interacao(id_interacao)
+                                             );
+            
+		
+create table if not exists Arquivo_midia(id_arquivo INT AUTO_INCREMENT,
+										 id_publicacao INT NOT NULL,
+                                         tipo_midia varchar(15),
+                                         
+                                         primary key (id_arquivo),
+                                         foreign key (id_publicacao) references publicacao(id_publicacao)
+                                         );
+
+create table if not exists Publicacao_permanente(id_publicacao INT NOT NULL,
+												legenda varchar(254),
+                                                
+                                                primary key(id_publicacao),
+												foreign key (id_publicacao) references publicacao(id_publicacao)
+                                                );
+
+ create table if not exists Publicacao_Temporaria (id_publicacao INT NOT NULL,
+												  data_expiracao TIMESTAMP NOT NULL,
+
+												  PRIMARY KEY (id_publicacao),
+												  FOREIGN KEY (id_publicacao) REFERENCES Publicacao(id_publicacao)
+	);
+
