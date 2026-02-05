@@ -31,7 +31,7 @@ create table if not exists Participa(id_perfil int,
 create table if not exists Mensagem(id_mensagem INT  AUTO_INCREMENT,
 									id_Conversa int not null,
                                     id_perfil int,
-                                    data_hora timestamp not null,
+                                    data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP not null,
                                     conteudo text,
                                     
                                     primary key(id_mensagem),
@@ -41,7 +41,7 @@ create table if not exists Mensagem(id_mensagem INT  AUTO_INCREMENT,
       
 create table if not exists Publicacao(id_publicacao INT AUTO_INCREMENT, 
 									  id_perfil int,
-                                      data_hora timestamp,
+                                      data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                       
                                       primary key (id_publicacao),
                                       foreign key(id_perfil) references Perfil(id_perfil)
@@ -53,7 +53,7 @@ create table if not exists Publicacao(id_publicacao INT AUTO_INCREMENT,
 create table if not exists Interacao(id_interacao INT AUTO_INCREMENT,
 									 id_perfil int,
                                      id_publicacao int NOT NULL,
-                                     data_hora timestamp,
+                                     data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                      
                                      primary key(id_interacao),
                                      foreign key(id_perfil) references Perfil(id_perfil),
@@ -76,6 +76,7 @@ create table if not exists interacao_curtida(id_interacao INT NOT NULL,
 create table if not exists Arquivo_midia(id_arquivo INT AUTO_INCREMENT,
 										 id_publicacao INT NOT NULL,
                                          tipo_midia varchar(15),
+                                         url_midia varchar(255),
                                          
                                          primary key (id_arquivo),
                                          foreign key (id_publicacao) references publicacao(id_publicacao)
