@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-import sqlite3
+import os
 import mysql.connector
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -60,10 +60,12 @@ class Conversa(BaseModel):
 #entrar em contato com o meu mysql
 def get_contato():
     return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="#Mi31032005",
-        database="projeto_bd"
+        # O host deve ser o nome do serviço no docker-compose
+        host=os.getenv("DB_HOST", "mysql_db"), 
+        user=os.getenv("DB_USER", "user"), # Use o usuário criado no compose
+        password=os.getenv("DB_PASSWORD", "user123"), # Use a senha do usuário
+        database=os.getenv("DB_NAME", "projeto_bd"),
+        port=3306
     )
 
 @app.post("/criar")
@@ -74,7 +76,7 @@ def criar_perfil(perfil: Perfil):
 
     cur.execute(
         """
-        INSERT INTO Perfil (email, nome, senha, perfil_aberto)
+        INSERT INTO perfil (email, nome, senha, perfil_aberto)
         VALUES (%s, %s, %s, %s)
         """,
         (perfil.email, perfil.nome, perfil.senha, perfil.perfil_aberto)
