@@ -86,10 +86,3 @@ create table if not exists publicacao_permanente(
     primary key(id_publicacao),
     foreign key (id_publicacao) references publicacao(id_publicacao)
 );
-
-create table if not exists publicacao_temporaria (
-    id_publicacao INT NOT NULL,
-    data_expiracao TIMESTAMP NOT NULL,
-    PRIMARY KEY (id_publicacao),
-    FOREIGN KEY (id_publicacao) REFERENCES publicacao(id_publicacao)
-);
