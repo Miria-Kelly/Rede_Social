@@ -14,7 +14,9 @@ services:
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   api:
-    build: ./api
+    build:
+      context: .
+      dockerfile: api/Dockerfile
     container_name: api_python
     ports:
       - "8000:8000"
