@@ -1,8 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, Form
-from datetime import datetime
 from pydantic import BaseModel
 import mysql.connector
-from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 from drive.MidiaDrive import upload_google_drive
 import os
