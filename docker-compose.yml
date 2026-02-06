@@ -1,0 +1,32 @@
+services:
+  mysql_db:
+    image: mysql:8.0
+    container_name: mysql_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: projeto_bd
+      MYSQL_USER: user
+      MYSQL_PASSWORD: user123
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    container_name: api_python
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=mysql_db
+      - DB_USER=user
+      - DB_PASSWORD=user123
+      - DB_NAME=projeto_bd
+    depends_on:
+      - mysql_db
+
+volumes:
+  mysql_data:

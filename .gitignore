@@ -1,0 +1,17 @@
+# Ambientes Virtuais (Venv)
+venv/
+.venv/
+env/
+
+# Cache do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Configurações do VS Code
+.vscode/
+
+# Arquivos de log e banco de dados local (opcional)
+*.log
+mysql_data/
