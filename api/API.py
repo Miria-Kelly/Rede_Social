@@ -1,19 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File, Form
+from datetime import datetime
 from pydantic import BaseModel
-import os
 import mysql.connector
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional
+from drive.MidiaDrive import upload_google_drive
+import os
+
 
 app = FastAPI()
-
-#nao sei oq significa nada o chat mandou colocar pra fazer conexao da api com o front que ele criou
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 #requisitos da tabela perfil
 class Perfil(BaseModel):
@@ -31,9 +26,6 @@ class Segue(BaseModel):
 class Publicacao(BaseModel):
     id_perfil: int
     tipo_midia: str
-
-from pydantic import BaseModel
-from typing import Optional
 
 class Interacao(BaseModel):
     id_perfil: int
@@ -68,6 +60,7 @@ def get_contato():
         port=3306
     )
 
+
 @app.post("/criar")
 def criar_perfil(perfil: Perfil):
     con = get_contato()
@@ -76,7 +69,7 @@ def criar_perfil(perfil: Perfil):
 
     cur.execute(
         """
-        INSERT INTO perfil (email, nome, senha, perfil_aberto)
+        INSERT INTO Perfil (email, nome, senha, perfil_aberto)
         VALUES (%s, %s, %s, %s)
         """,
         (perfil.email, perfil.nome, perfil.senha, perfil.perfil_aberto)
@@ -86,6 +79,7 @@ def criar_perfil(perfil: Perfil):
     cur.close()
     con.close()
     return {"msg": "Perfil criado"}
+
 
 @app.get("/ver/{id_perfil}")
 def ver_seguidores(id_perfil: int):
@@ -124,9 +118,9 @@ def seguir(dados: Segue):
             """,
             (dados.user_seguidor, dados.user_seguido)   
         )
-        con.commit()
-        criar_conversa(dados.user_seguidor, dados.user_seguido)
         
+        criar_conversa(cur, dados.user_seguidor, dados.user_seguido)
+        con.commit()
 
     #se quiser seguir dnv um seguidor 
     except mysql.connector.errors.IntegrityError:
@@ -138,8 +132,18 @@ def seguir(dados: Segue):
 
     return {"msg": "follow realizado"}
 
+
 @app.post("/publicar")
-def publicar(pub: Publicacao):
+async def publicar(
+    id_perfil: int = Form(...),
+    tipo_midia: str = Form(...),
+    imagem: UploadFile = File(...)
+):
+
+    os.makedirs("temp", exist_ok=True)
+
+    caminho = f"temp/{imagem.filename}"
+
     con = get_contato()
     cur = con.cursor()
 
@@ -149,25 +153,39 @@ def publicar(pub: Publicacao):
         INSERT INTO Publicacao (id_perfil)
         VALUES (%s)
         """,
-        (pub.id_perfil,)
+        (id_perfil,)
     )
 
     id_publicacao = cur.lastrowid
 
-    # cria arquivo de mídia
+    #salva imagem temporariamente
+    caminho = f"temp/{imagem.filename}"
+    with open(caminho, "wb") as f:
+        f.write(await imagem.read())
+
+    #upload pro GD
+    link_imagem = upload_google_drive(caminho)
+
+    #cria arquivo de mídia
     cur.execute(
         """
-        INSERT INTO Arquivo_midia (id_publicacao, tipo_midia)
-        VALUES (%s, %s)
+        INSERT INTO Arquivo_midia (id_publicacao, tipo_midia, url_midia)
+        VALUES (%s, %s, %s)
         """,
-        (id_publicacao, pub.tipo_midia)
+        (id_publicacao, tipo_midia, link_imagem)
     )
+    os.remove(caminho)
 
     con.commit()
     cur.close()
     con.close()
 
-    return {"msg": "A publicação foi enviada"}
+    return {
+        "id_publicacao": id_publicacao,
+        "imagem_url": link_imagem
+    }
+
+
 
 @app.post("/interacao")
 def interagir(i : Interacao):
@@ -187,11 +205,14 @@ def interagir(i : Interacao):
                 "INSERT INTO interacao_curtida (id_interacao)"
                 "VALUES(%s)", (id_interacao,)
             )
-        if i.tipo_interacao == "comentario":
+        elif i.tipo_interacao == "comentario":
             cur.execute(
                 "INSERT INTO interacao_comentario (id_interacao, texto)"
                 "VALUES(%s, %s)", (id_interacao, i.texto)
-            )   
+            )
+            if not i.texto:
+                return {"erro": "Comentário precisa de texto"}   
+        
     except mysql.connector.errors.IntegrityError:
         return {"msg":"Publicacao inexistente"}
     con.commit()
@@ -217,50 +238,37 @@ def mandar_msg(msg: Mensagem):
     con.close()
     return {"msg":"Mensagem enviada"}
 
-@app.post("/conversa")
-def criar_conversa(seguidor, seguido):
-    con = get_contato()
-    cur = con.cursor(dictionary=True)
-    #verifica se o id ja tem uma conversa criada e se tiver, agrupa
+def criar_conversa(cur, seguidor, seguido):
     cur.execute(
         """
         SELECT id_conversa
         FROM participa
-        WHERE id_perfil in (%s, %s)
+        WHERE id_perfil IN (%s, %s)
         GROUP BY id_conversa
-        HAVING COUNT(DISTINCT id_perfil) = 2;
+        HAVING COUNT(DISTINCT id_perfil) = 2
         """,
         (seguidor, seguido)
     )
+
     conversa = cur.fetchone()
     if conversa:
-        cur.close()
-        con.close()
-        return {
-            "msg": "Vocês já são amigos"
-        }
-    #cria a conversa
+        return
+
     cur.execute(
         """
         INSERT INTO conversa (tipo_conversa)
-        VALUES(%s)
-
-        """,("privado",)
-
+        VALUES (%s)
+        """,
+        ("privado",)
     )
     
-    #funcao pra busrcar a chave primaria auto_incremente que acbou de ser criada
+
     id_conversa = cur.lastrowid
 
     participa(cur, seguidor, id_conversa)
     participa(cur, seguido, id_conversa)
-  
-    con.commit()
-    cur.close()
-    con.close()
-    return {"msg":"Chat criado"}
 
-@app.post("/participa")
+
 def participa(cur, perfil, id_conversa):
     cur.execute(
         """
@@ -271,3 +279,182 @@ def participa(cur, perfil, id_conversa):
 
     )
     return {"msg":"Chat criado"}
+
+@app.delete("/seguir")
+def deixar_de_seguir(dados: Segue):
+    con = get_contato()
+    cur = con.cursor()
+
+    cur.execute("""
+        DELETE FROM Segue
+        WHERE user_seguidor = %s AND user_seguido = %s
+    """, (dados.user_seguidor, dados.user_seguido))
+
+    con.commit()
+    cur.close()
+    con.close()
+
+    return {"msg": "Relação removida"}
+
+@app.delete("/seguidor")
+def remover_seguidor(dados: Segue):
+    con = get_contato()
+    cur = con.cursor()
+
+    cur.execute("""
+        DELETE FROM Segue
+        WHERE user_seguido = %s AND user_seguidor = %s
+    """, (dados.user_seguido, dados.user_seguidor))
+
+    con.commit()
+    cur.close()
+    con.close()
+
+    return {"msg": "Relação removida"}
+
+@app.delete("/publicacao/{id_publicacao}")
+def excluir_publicacao(id_publicacao: int):
+    con = get_contato()
+    cur = con.cursor()
+
+    try:
+        #comentarios
+        cur.execute("""
+            DELETE FROM interacao_comentario
+            WHERE id_interacao IN (
+                SELECT id_interacao FROM Interacao
+                WHERE id_publicacao = %s
+            )
+        """, (id_publicacao,))
+
+        #curtidas
+        cur.execute("""
+            DELETE FROM interacao_curtida
+            WHERE id_interacao IN (
+                SELECT id_interacao FROM Interacao
+                WHERE id_publicacao = %s
+            )
+        """, (id_publicacao,))
+
+        #interações
+        cur.execute("""
+            DELETE FROM Interacao
+            WHERE id_publicacao = %s
+        """, (id_publicacao,))
+
+        #tipos de publicação
+        cur.execute("""
+            DELETE FROM Publicacao_permanente
+            WHERE id_publicacao = %s
+        """, (id_publicacao,))
+
+        #arquivos
+        cur.execute("""
+            DELETE FROM Arquivo_midia
+            WHERE id_publicacao = %s
+        """, (id_publicacao,))
+
+        #publicação
+        cur.execute("""
+            DELETE FROM Publicacao
+            WHERE id_publicacao = %s
+        """, (id_publicacao,))
+
+        con.commit()
+
+    except Exception as e:
+        con.rollback()
+        return {"erro": str(e)}
+
+    cur.close()
+    con.close()
+
+    return {"msg": "Publicação excluída"}
+
+@app.delete("/perfil/{id_perfil}")
+def excluir_perfil(id_perfil: int):
+    con = get_contato()
+    cur = con.cursor()
+
+    try:
+        # Mensagens do perfil
+        cur.execute("""
+            DELETE FROM Mensagem
+            WHERE id_perfil = %s
+        """, (id_perfil,))
+
+        # Interações do perfil
+        cur.execute("""
+            DELETE FROM interacao_comentario
+            WHERE id_interacao IN (
+                SELECT id_interacao FROM Interacao WHERE id_perfil = %s
+            )
+        """, (id_perfil,))
+
+        cur.execute("""
+            DELETE FROM interacao_curtida
+            WHERE id_interacao IN (
+                SELECT id_interacao FROM Interacao WHERE id_perfil = %s
+            )
+        """, (id_perfil,))
+
+        cur.execute("""
+            DELETE FROM Interacao
+            WHERE id_perfil = %s
+        """, (id_perfil,))
+
+        # Publicações do perfil
+        cur.execute("""
+            DELETE FROM Publicacao_permanente
+            WHERE id_publicacao IN (
+                SELECT id_publicacao FROM Publicacao WHERE id_perfil = %s
+            )
+        """, (id_perfil,))
+
+        cur.execute("""
+            DELETE FROM Publicacao_temporaria
+            WHERE id_publicacao IN (
+                SELECT id_publicacao FROM Publicacao WHERE id_perfil = %s
+            )
+        """, (id_perfil,))
+
+        cur.execute("""
+            DELETE FROM Arquivo_midia
+            WHERE id_publicacao IN (
+                SELECT id_publicacao FROM Publicacao WHERE id_perfil = %s
+            )
+        """, (id_perfil,))
+
+        cur.execute("""
+            DELETE FROM Publicacao
+            WHERE id_perfil = %s
+        """, (id_perfil,))
+
+        # Seguindo / seguidores
+        cur.execute("""
+            DELETE FROM Segue
+            WHERE user_seguidor = %s OR user_seguido = %s
+        """, (id_perfil, id_perfil))
+
+        # Participação em conversas
+        cur.execute("""
+            DELETE FROM Participa
+            WHERE id_perfil = %s
+        """, (id_perfil,))
+
+        # Perfil
+        cur.execute("""
+            DELETE FROM Perfil
+            WHERE id_perfil = %s
+        """, (id_perfil,))
+
+        con.commit()
+
+    except Exception as e:
+        con.rollback()
+        return {"erro": str(e)}
+
+    cur.close()
+    con.close()
+
+    return {"msg": "Perfil excluído com sucesso"}
