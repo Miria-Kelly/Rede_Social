@@ -89,7 +89,7 @@ def ver_seguidores(id_perfil: int):
 
     cur.execute(
         """
-        SELECT *
+        SELECT user_seguidor
         FROM segue
         WHERE user_seguido = %s
         """,
@@ -114,7 +114,7 @@ def seguir(dados: Segue):
     try:
         cur.execute(
             """
-            INSERT INTO Segue (user_seguidor, user_seguido)
+            INSERT INTO segue (user_seguidor, user_seguido)
             VALUES (%s, %s)
             """,
             (dados.user_seguidor, dados.user_seguido)   
@@ -378,88 +378,22 @@ def excluir_perfil(id_perfil: int):
     cur = con.cursor()
 
     try:
-        # Mensagens do perfil
-        cur.execute("""
-            DELETE FROM mensagem
-            WHERE id_perfil = %s
-        """, (id_perfil,))
+        cur.execute(
+            "DELETE FROM perfil WHERE id_perfil = %s",
+            (id_perfil,)
+        )
 
-        # Interações do perfil
-        cur.execute("""
-            DELETE FROM interacao_comentario
-            WHERE id_interacao IN (
-                SELECT id_interacao FROM Interacao WHERE id_perfil = %s
-            )
-        """, (id_perfil,))
-
-        cur.execute("""
-            DELETE FROM interacao_curtida
-            WHERE id_interacao IN (
-                SELECT id_interacao FROM Interacao WHERE id_perfil = %s
-            )
-        """, (id_perfil,))
-
-        cur.execute("""
-            DELETE FROM interacao
-            WHERE id_perfil = %s
-        """, (id_perfil,))
-
-        # Publicações do perfil
-        cur.execute("""
-            DELETE FROM publicacao_permanente
-            WHERE id_publicacao IN (
-                SELECT id_publicacao FROM Publicacao WHERE id_perfil = %s
-            )
-        """, (id_perfil,))
-
-        cur.execute("""
-            DELETE FROM publicacao_temporaria
-            WHERE id_publicacao IN (
-                SELECT id_publicacao FROM Publicacao WHERE id_perfil = %s
-            )
-        """, (id_perfil,))
-
-        cur.execute("""
-            DELETE FROM arquivo_midia
-            WHERE id_publicacao IN (
-                SELECT id_publicacao FROM Publicacao WHERE id_perfil = %s
-            )
-        """, (id_perfil,))
-
-        cur.execute("""
-            DELETE FROM publicacao
-            WHERE id_perfil = %s
-        """, (id_perfil,))
-
-        # Seguindo / seguidores
-        cur.execute("""
-            DELETE FROM segue
-            WHERE user_seguidor = %s OR user_seguido = %s
-        """, (id_perfil, id_perfil))
-
-        # Participação em conversas
-        cur.execute("""
-            DELETE FROM participa
-            WHERE id_perfil = %s
-        """, (id_perfil,))
-
-        # Perfil
-        cur.execute("""
-            DELETE FROM perfil
-            WHERE id_perfil = %s
-        """, (id_perfil,))
-        
         if cur.rowcount == 0:
             con.rollback()
             return {"msg": "Perfil não encontrado"}
-        
+
         con.commit()
+        return {"msg": "Perfil excluído com sucesso"}
 
     except Exception as e:
         con.rollback()
         return {"erro": str(e)}
 
-    cur.close()
-    con.close()
-
-    return {"msg": "Perfil excluído com sucesso"}
+    finally:
+        cur.close()
+        con.close()
