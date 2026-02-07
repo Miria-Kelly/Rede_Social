@@ -15,7 +15,7 @@ O banco foi modelado, implementado e povoado utilizando Docker.
 
 1. Clone o repositório:
 ```bash
-git clone https://github.com/Miria-Kelly/Rede_Social.git
+git clone https://github.com/Miria-Kelly/Rede_Social/tree/Jonathan/docker-setup
 ```
 2. Acesse a pasta raiz do projeto no terminal:
 ```bash
@@ -25,7 +25,6 @@ cd Rede_Social
 ```bash
 docker-compose up --build
 ```
-4. Acesse a API pelo POSTMAN
 
 ## 2 Esquema conceitual do Banco de Dados
 
@@ -38,29 +37,21 @@ docker-compose up --build
 
 ## 4 Povoamento do Banco de Dados
 
-O banco de dados foi povoado por meio de uma API desenvolvida em Python utilizando FastAPI, responsável por inserir registros nas tabelas principais do sistema através de requisições HTTP.
-A API realiza conexão direta com o MySQL utilizando a biblioteca mysql.connector, permitindo a criação de perfis, relacionamentos de seguidores, publicações, interações e mensagens.
+O banco de dados é inicializado e povoado automaticamente por meio do script SQL init.sql.
+Esse script é executado durante a primeira criação do container do banco de dados, no processo de subida da aplicação via Docker.
 
-O povoamento foi realizado via requisições no Postman, utilizando os endpoints:
+O init.sql é responsável por:
 
+1. Criar toda a estrutura do banco de dados (tabelas, chaves primárias e estrangeiras);
+2. Inserir dados iniciais para fins de teste, como perfis, relacionamentos, conversas, publicações e interações.
 
-### POST /criar
-Responsável por inserir novos registros na tabela Perfil.
+O processo ocorre de forma automática quando o container é criado, não sendo necessária nenhuma intervenção manual para a criação ou o povoamento do banco.
 
-### POST /seguir
-Insere registros na tabela Segue.
-Além disso, ao realizar um seguimento válido, o sistema cria automaticamente uma conversa entre os perfis caso ainda não exista.
+Importante:
+O script init.sql é executado apenas na primeira criação do volume do banco de dados. Caso o container já tenha sido iniciado anteriormente, o script não será executado novamente. Para recriar o banco e reaplicar o povoamento inicial, é necessário remover os volumes do Docker antes de subir os containers novamente.
 
-### POST /publicar
-Insere uma nova publicação na tabela Publicacao e também cria o registro correspondente na tabela Arquivo_midia.
-
-### POST /interacao
-Registra uma interação na tabela Interacao.
-Dependendo do tipo (curtida ou comentario), também insere dados na subentidade correspondente (Interacao_curtida
-Interacao_comentario)
-
-### POST /mensagem
-Insere mensagens na tabela Mensagem, vinculadas a uma conversa e a um perfil.
-
-### POST /conversa
-Cria conversas privadas na tabela Conversa e registra os participantes na tabela Participa.
+Exemplo:
+```bash
+docker compose down -v
+docker compose up --build
+```
