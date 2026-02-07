@@ -1,4 +1,4 @@
-# Rede_Social# Projeto Banco de Dados – Rede Social
+# Projeto Banco de Dados – Rede Social
 
 ## Descrição do Projeto
 Este projeto consiste no desenvolvimento de um banco de dados relacional para uma rede social que permite que o usuário interaja com outros por meio de conversas ou interações e realize publicações.
