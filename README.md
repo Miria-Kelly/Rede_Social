@@ -4,7 +4,7 @@
 Este projeto consiste no desenvolvimento de um banco de dados relacional para uma rede social que permite que o usuário interaja com outros por meio de conversas ou interações e realize publicações.
 O banco foi modelado, implementado e povoado utilizando Docker.
 
-## 1 Como Executar o Projeto
+## 1. Como Executar o Projeto
 
 ### Pré-requisitos
 - Docker instalado
@@ -26,16 +26,16 @@ cd Rede_Social/tree/Jonathan/docker-setup
 docker-compose up --build
 ```
 
-## 2 Esquema conceitual do Banco de Dados
+## 2. Esquema conceitual do Banco de Dados
 
 ![Esquema Conceitual do Banco de Dados](/docs/esquema_conceitual.jpg)
 
-## 3 Dicionário de Dados
+## 3. Dicionário de Dados
 
  O dicionário de dados encontra-se no arquivo pdf abaixo, contendo descrição das tabelas, atributos, tipos de dados e restrições
  [Acessar Dicionário de Dados](./docs/dicionario_dados.pdf)
 
-## 4 Povoamento do Banco de Dados
+## 4. Povoamento do Banco de Dados
 
 O banco de dados é inicializado e povoado automaticamente por meio do script SQL init.sql.
 Esse script é executado durante a primeira criação do container do banco de dados, no processo de subida da aplicação via Docker.
@@ -55,4 +55,5 @@ Exemplo:
 docker compose down -v
 docker compose up --build
 ```
+
 
